@@ -1,0 +1,13 @@
+version: '3.8'
+services:
+download-server:
+build: .
+container_name: download-server
+env_file: .env
+ports:
+- "4000:4000"
+volumes:
+- ./data:/usr/src/app/data
+# Optional: mount host storage path when STORAGE_DRIVER=host
+- ${HOST_STORAGE_PATH:-/var/media_store/downloads}:${HOST_STORAGE_PATH:-/var/media_store/downloads}
+restart: unless-stopped

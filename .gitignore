@@ -1,0 +1,40 @@
+# Node modules
+node_modules/
+
+# TypeScript build output
+dist/
+
+# Environment / secrets
+.env
+.env.local
+
+# Local storage used by the app (don't commit media)
+data/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS / Editor
+.DS_Store
+.vscode/
+*.swp
+
+# Docker overrides (machine-specific)
+docker-compose.override.yml
+
+# Coverage / tests
+coverage/
+
+# Optional lockfiles (usually you SHOULD commit these)
+# package-lock.json
+# yarn.lock
+
+# IDE / swap
+*.sublime-workspace
+*.sublime-project
+
+# Thumbs / system files
+Thumbs.db
