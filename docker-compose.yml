@@ -1,13 +1,31 @@
-version: '3.8'
+version: "3.8"
+
 services:
-download-server:
-build: .
-container_name: download-server
-env_file: .env
-ports:
-- "4000:4000"
-volumes:
-- ./data:/usr/src/app/data
-# Optional: mount host storage path when STORAGE_DRIVER=host
-- ${HOST_STORAGE_PATH:-/var/media_store/downloads}:${HOST_STORAGE_PATH:-/var/media_store/downloads}
-restart: unless-stopped
+  download-server:
+    build: .
+    container_name: download-server
+    env_file: .env           # loads .env into compose
+    environment:             # pass env vars into the container (values come from .env)
+      - PORT=${PORT}
+      - NODE_ENV=${NODE_ENV}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      - STORAGE_DRIVER=${STORAGE_DRIVER}
+      - HOST_STORAGE_PATH=${HOST_STORAGE_PATH}
+      - PUBLIC_BASE_URL=${PUBLIC_BASE_URL}
+      - TEMP_TTL=${TEMP_TTL}
+      - ENABLED_MEDIA_TYPES=${ENABLED_MEDIA_TYPES}
+      - LOG_LEVEL=${LOG_LEVEL}
+    ports:
+      - "${PORT:-4000}:4000"
+    volumes:
+      # In-container data directory (project-local) so container writes survive restart
+      - ./data:/usr/src/app/data
+      # Host path mount for persistent media storage (only used when STORAGE_DRIVER=host or both)
+      - ${HOST_STORAGE_PATH}:${HOST_STORAGE_PATH}
+    restart: unless-stopped
+    # Optional logging config (commented out by default). Uncomment if you want log rotation:
+    # logging:
+    #   driver: "json-file"
+    #   options:
+    #     max-size: "10m"
+    #     max-file: "3"
