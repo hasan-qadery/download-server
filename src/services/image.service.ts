@@ -1,37 +1,41 @@
 // src/services/image.service.ts
 /**
- * image.service.ts
+ * Pure-JS image processor using Jimp.
  *
- * - Converts an image file (any input format) to webp using sharp.
- * - Generates a thumbnail variant.
- * - Returns metadata { mime, width, height, metadata }.
+ * - Converts input image (any supported by Jimp) to an output image format (default: png).
+ * - Optionally produces a thumbnail.
+ * - Returns metadata: { mime, width, height, engine }
+ *
+ * Limitations:
+ * - Jimp is pure JS and slower than sharp.
+ * - WebP support in Jimp may be limited on some platforms; by default this module writes PNG.
+ *   If you want WebP and have `sharp` available, prefer the sharp-based pipeline for production.
  *
  * Usage:
- *   await imageService.processImage({
- *     srcAbsolutePath: '/abs/temp/123/0',
- *     destAbsolutePath: '/abs/media/books/.../001.webp',
- *     thumbnailPath: '/abs/media/books/.../001.thumb.webp',
- *     quality: 80
- *   });
- *
- * Notes:
- *  - Requires `sharp` installed (already in scaffold).
- *  - If destination already exists it will be overwritten.
+ *  await processImage({
+ *    srcAbsolutePath: '/tmp/123/0',
+ *    destAbsolutePath: '/media/books/1/chapters/1/pages/001.png',
+ *    thumbnailPath: '/media/books/.../001.thumb.png',
+ *    maxWidth: 2000,
+ *    quality: 80, // approximate (Jimp quality influences jpeg/webp)
+ *    outFormat: 'png' // 'png'|'jpeg'|'webp' (webp may be not ideal with Jimp)
+ *  });
  */
 
-import path from "path";
+import Jimp from "jimp";
 import fs from "fs/promises";
-import sharp from "sharp";
+import path from "path";
 import { logger } from "../logger";
 
 export type ImageProcessOpts = {
   srcAbsolutePath: string;
   destAbsolutePath: string;
-  thumbnailPath?: string; // optional path for thumb; if omitted no thumb generated
+  thumbnailPath?: string;
   filename?: string;
-  quality?: number; // 0-100
-  maxWidth?: number | null; // optional resize
+  quality?: number; // 0-100 (affects JPEG/WebP quality)
+  maxWidth?: number | null;
   maxHeight?: number | null;
+  outFormat?: "png" | "jpeg" | "webp";
 };
 
 export async function processImage(opts: ImageProcessOpts): Promise<{
@@ -39,38 +43,82 @@ export async function processImage(opts: ImageProcessOpts): Promise<{
   width: number | null;
   height: number | null;
   metadata?: any;
+  engine: "jimp";
 }> {
-  const { srcAbsolutePath, destAbsolutePath, thumbnailPath, quality = 80, maxWidth, maxHeight } = opts;
+  const {
+    srcAbsolutePath,
+    destAbsolutePath,
+    thumbnailPath,
+    quality = 80,
+    maxWidth,
+    maxHeight,
+    outFormat = "png",
+  } = opts;
 
-  // Read input into sharp pipeline
-  const img = sharp(srcAbsolutePath, { failOnError: false });
+  // Ensure parent dir exists
+  await fs.mkdir(path.dirname(destAbsolutePath), { recursive: true });
 
-  // Optionally resize preserving aspect ratio
-  if (maxWidth || maxHeight) {
-    img.resize(maxWidth || undefined, maxHeight || undefined, { fit: "inside" });
+  let image: Jimp;
+  try {
+    image = await Jimp.read(srcAbsolutePath);
+  } catch (err) {
+    logger.warn(`Jimp.read failed for ${srcAbsolutePath}: ${String(err)}`);
+    // rethrow to let caller fallback
+    throw err;
   }
 
-  // Convert to webp
-  await img.webp({ quality }).toFile(destAbsolutePath);
+  // Resize preserving aspect ratio if requested
+  if (maxWidth || maxHeight) {
+    const w = maxWidth ?? Jimp.AUTO;
+    const h = maxHeight ?? Jimp.AUTO;
+    image = image.scaleToFit(w === Jimp.AUTO ? image.bitmap.width : w, h === Jimp.AUTO ? image.bitmap.height : h);
+  }
 
-  // Read metadata of the final file to report accurate dimensions
-  const finalMeta = await sharp(destAbsolutePath).metadata();
-  const mime = `image/webp`;
-  const width = finalMeta.width ?? null;
-  const height = finalMeta.height ?? null;
+  // Jimp quality applies mostly to JPEG/WebP
+  if (outFormat === "jpeg") image.quality(Math.max(0, Math.min(100, quality)));
 
-  // Generate thumbnail if requested
+  // Write final image. Jimp uses mime constants:
+  let mimeOut = Jimp.MIME_PNG;
+  if (outFormat === "jpeg") mimeOut = Jimp.MIME_JPEG;
+  else if (outFormat === "webp") {
+    // Jimp supports WEBP if the environment supports it (it uses @jimp/plugin-webp)
+    // behavior may vary; if writing webp throws, let the caller catch it.
+    // We still attempt it because many platforms work.
+    // Set mimeOut as webp mime type manually.
+    // @ts-ignore - internal constant may not exist, so set string
+    mimeOut = "image/webp";
+  }
+
+  // Save dest
+  try {
+    await image.writeAsync(destAbsolutePath);
+  } catch (err) {
+    logger.warn(`Jimp.writeAsync failed for ${destAbsolutePath}: ${String(err)}`);
+    throw err;
+  }
+
+  // Thumbnail (if requested)
   if (thumbnailPath) {
     try {
-      const thumbWidth = 400; // default thumb width — you can make this configurable
-      // create thumbnail from the just-created webp to preserve final look
-      await sharp(destAbsolutePath).resize(thumbWidth).webp({ quality: Math.max(40, Math.floor(quality / 2)) }).toFile(thumbnailPath);
+      const thumb = image.clone();
+      const thumbWidth = 400;
+      thumb.scaleToFit(thumbWidth, Jimp.AUTO);
+      await fs.mkdir(path.dirname(thumbnailPath), { recursive: true });
+      await thumb.writeAsync(thumbnailPath);
     } catch (err) {
-      logger.warn("Thumbnail generation failed: " + String(err));
+      logger.warn(`Thumbnail generation failed: ${String(err)}`);
+      // continue without failing the whole operation
     }
   }
 
-  return { mime, width, height, metadata: finalMeta };
+  const finalMeta = { width: image.bitmap.width, height: image.bitmap.height };
+  return {
+    mime: mimeOut,
+    width: finalMeta.width,
+    height: finalMeta.height,
+    metadata: finalMeta,
+    engine: "jimp",
+  };
 }
 
 export default { processImage };

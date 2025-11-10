@@ -21,7 +21,7 @@ import { logger, stream } from "../logger";
 import { config } from "../config";
 
 const router = Router();
-// router.use(authMiddleware)
+router.use(authMiddleware)
 
 router.post("/upload", uploadMedia);
 

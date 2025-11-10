@@ -43,5 +43,6 @@
     "forceConsistentCasingInFileNames": true,  /* Disallow inconsistently-cased references to the same file. */
     "esModuleInterop": true,                  /* Enables emit interoperability between CommonJS and ES Modules via creation of namespace objects for all imports. Implies 'allowSyntheticDefaultImports'. */
     // "resolveJsonModule": true /* If any problem for importing json files happend you could use it. */
+    "allowSyntheticDefaultImports": true,
   }
 }
