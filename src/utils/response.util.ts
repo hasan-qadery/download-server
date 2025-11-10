@@ -72,12 +72,12 @@ export class Resp {
   public send(res: Response) {
     const ip = res.req.ip ? ipaddr.process(res.req.ip).toString() : "";
     let end = +new Date();
-    let diff = end - res.reqStartTime;
+    // let diff = end - res.reqStartTime;
 
-    console.log(
-      `${res.req.method} ${res.req.originalUrl} - ${this.code} ${diff} ms ${ip}`
-    );
-    res.header("X-Response-Time", `${diff} ms`);
+    // console.log(
+    //   `${res.req.method} ${res.req.originalUrl} - ${this.code} ${diff} ms ${ip}`
+    // );
+    // res.header("X-Response-Time", `${diff} ms`);
     return res.status(this.code < 0 ? 400 : this.code).json(this);
   }
 }

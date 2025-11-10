@@ -1,19 +1,19 @@
 import { Request, Response, NextFunction } from "express";
-import { Resp } from "../utils/Response";
-import { AuthErrEnum } from "../enums/auth/auth-message.enum";
-import { LoginService } from "../services/login.service";
-import { LoginModel } from "../models/login.model";
-import { AuthTokenTypeEnum } from "../enums/auth/auth-token-type.enum";
+import { Resp } from "../utils/response.util";
+import { UserService } from "../services/user.service";
+// import { LoginService } from "../services/login.service";
+// import { LoginModel } from "../models/login.model";
+// import { AuthTokenTypeEnum } from "../enums/auth/auth-token-type.enum";
 
-const authService = new AuthService();
+// const authService = new AuthService();
 const userService = new UserService();
-const loginService = new LoginService();
+// const loginService = new LoginService();
 
 declare global {
   namespace Express {
     interface Request {
       user: UserModel;
-      login: LoginModel;
+      // login: LoginModel;
     }
   }
 }
