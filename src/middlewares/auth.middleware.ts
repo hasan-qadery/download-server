@@ -1,19 +1,13 @@
+// src/middleware/apiKeyAuth.ts
 import { Request, Response, NextFunction } from "express";
-import { Resp } from "../utils/response.util";
-import { UserService } from "../services/user.service";
-// import { LoginService } from "../services/login.service";
-// import { LoginModel } from "../models/login.model";
-// import { AuthTokenTypeEnum } from "../enums/auth/auth-token-type.enum";
-
-// const authService = new AuthService();
-const userService = new UserService();
-// const loginService = new LoginService();
+import { ApiKeyModel } from "../models/api-key.model";
+import { hashApiKey } from "../utils/api-key.util";
 
 declare global {
   namespace Express {
     interface Request {
-      user: UserModel;
-      // login: LoginModel;
+      userId?: string;
+      apiKeyId?: number;
     }
   }
 }
@@ -23,48 +17,33 @@ export async function authMiddleware(
   res: Response,
   next: NextFunction
 ) {
-  const authorization = req.headers.authorization;
-  if (!authorization)
-    return Resp.error(req.t("AuthErrEnum.NO_TOKEN_PROVIDED"), 401).send(res);
+  const auth = req.header("authorization") || "";
+  // Accept "ApiKey <token>" or bare token
+  const token = auth.includes(" ") ? auth.split(" ")[1] : auth;
+  if (!token) return res.status(401).json({ error: "No API key" });
 
-  const token = authorization.split(" ")[1];
-  if (!token) {
-    return Resp.error(req.t("AuthErrEnum.NO_TOKEN_PROVIDED"), 401).send(res);
+  const hashed = hashApiKey(token);
+
+  const row = await ApiKeyModel.findOne({
+    where: {
+      keyHash: hashed,
+      revoked: false,
+      // expiresAt null or in future
+      // use sequelize literal or check in JS after finding row
+    },
+  });
+
+  if (!row) return res.status(401).json({ error: "Invalid API key" });
+
+  if (row.expires_at && row.expires_at < new Date()) {
+    return res.status(401).json({ error: "API key expired" });
   }
 
-  let payload;
-  try {
-    payload = await authService.decodeAccessToken(
-      token,
-      AuthTokenTypeEnum.ACCESS
-    );
+  // // update lastUsedAt (optional, consider doing this in background)
+  // row.last_used_at = new Date();
+  // await row.save();
 
-    //TODO: after 60 day change here to only allow tokens with the type of access.
-    if (payload.tokenType === AuthTokenTypeEnum.REFRESH) {
-      return Resp.error(req.t("AuthErrEnum.INVALID_TOKEN"), 401).send(res);
-    }
-  } catch (err) {
-    return Resp.error(req.t("AuthErrEnum.INVALID_TOKEN"), 401).send(res);
-  }
-
-  let login = await loginService.findById(payload.id);
-
-  if (!login) {
-    return Resp.error(req.t("AuthErrEnum.INVALID_TOKEN"), 401).send(res);
-  }
-
-  let user = await userService.findWithRelations(login.user_id);
-
-  if (!user) {
-    return Resp.error(req.t("AuthErrEnum.NO_USER_WITH_THIS_ID"), 401).send(res);
-  }
-
-  if (user.is_banned) {
-    return Resp.error(req.t("UserErrorEnum.BANNED"), 403).send(res);
-  }
-
-  req.login = login;
-  req.user = user;
-
-  next();
+  req.userId = row.user_id;
+  req.apiKeyId = row.id;
+  return next();
 }

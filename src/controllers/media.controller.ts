@@ -19,11 +19,12 @@ import multer from "multer";
 import { storageService } from "../services/storage.service";
 import { logger, stream } from "../logger";
 import { config } from "../config";
+import { authMiddleware } from "../middlewares/auth.middleware";
 
 const router = Router();
-router.use(authMiddleware)
+router.use(authMiddleware);
 
-router.post("/upload", uploadMedia);
+router.post("/upload", mediaValidationMiddleware, uploadMedia);
 
 async function uploadMedia(req: Request, res: Response, next: NextFunction) {
   if (req.fileValidationError) {
@@ -37,3 +38,5 @@ async function uploadMedia(req: Request, res: Response, next: NextFunction) {
   if (!req.file)
     return Resp.error(req.t("StorageErrorEnum.FILE_REQUIRED"), 400).send(res);
 }
+
+export default router;

@@ -2,7 +2,7 @@
 import express from "express";
 import bodyParser from "body-parser";
 import morgan from "morgan";
-import routes from "./routes";
+import router from "./routs";
 import { stream } from "./logger";
 import { config } from "./config";
 
@@ -11,7 +11,7 @@ app.use(morgan("combined", { stream }));
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.use("/api/v1", routes);
+app.use("/api/v1", router);
 
 app.listen(config.port, () => {
   console.log(`Download server listening on ${config.port}`);

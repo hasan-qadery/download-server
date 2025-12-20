@@ -132,8 +132,8 @@ async function validateImage(file: Express.Multer.File) {
 
   try {
     const image = file.buffer
-      ? await Jimp.read(file.buffer)
-      : await Jimp.read((file as any).path);
+      ? await Jimp.Jimp.read(file.buffer)
+      : await Jimp.Jimp.read((file as any).path);
     const w = image.bitmap.width;
     const h = image.bitmap.height;
     if (rule.maxWidth && w > rule.maxWidth)
@@ -273,11 +273,9 @@ export async function validateAndDispatchPure(
       RULES.general.maxTotalFiles &&
       files.length > RULES.general.maxTotalFiles
     ) {
-      return res
-        .status(400)
-        .json({
-          error: `too many files in request (max ${RULES.general.maxTotalFiles})`,
-        });
+      return res.status(400).json({
+        error: `too many files in request (max ${RULES.general.maxTotalFiles})`,
+      });
     }
 
     // If client pre-declares media_type enforce it (optional)
