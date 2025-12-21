@@ -5,19 +5,23 @@ import morgan from "morgan";
 import router from "./routs";
 import { stream } from "./logger";
 import { config } from "./config";
+import { redis } from "./proxies/redis-proxy";
 
 const app = express();
 app.use(morgan("combined", { stream }));
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ extended: true }));
 
+(async () => {
+  await redis.init();
+  // now safe to use redis.* methods
+})();
+
 app.use("/api/v1", router);
 
 app.listen(config.port, () => {
   console.log(`Download server listening on ${config.port}`);
 });
-
-
 
 // import { storageService } from "./services/storage.service";
 // import imageService from "./services/image.service";

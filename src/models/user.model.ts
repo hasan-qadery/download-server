@@ -12,6 +12,14 @@ const hashPassword = async (user: UserModel) => {
   }
 };
 
+const beforeUpdate = async (user: UserModel, options: any) => {
+  await hashPassword(user);
+};
+
+const beforeCreate = async (user: UserModel, options: any) => {
+  await hashPassword(user);
+};
+
 class UserModel extends Model {
   public id!: string;
 
@@ -53,6 +61,9 @@ UserModel.init(
     sequelize,
   }
 );
+
+UserModel.beforeValidate(beforeCreate);
+UserModel.beforeUpdate(beforeUpdate);
 
 UserModel.prototype.comparePassword = function (password: string) {
   const hashedPassword = this.password;

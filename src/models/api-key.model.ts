@@ -1,33 +1,33 @@
-// src/models/ApiKey.ts
-import { Model, DataTypes } from "sequelize";
+import { DataTypes, Model } from "sequelize";
 import { sequelize } from "../db/config";
 import { UserModel } from "./user.model";
 
 class ApiKeyModel extends Model {
-  public id!: number;
-  public user_id!: string;
-  public key_hash!: string;
+  public id!: string; // client_id
+  public user_id!: string; // UUID
+  public secret_hash!: string;
   public label!: string | null;
-  public expires_at?: Date | null;
-  public created_at!: Date;
-  public updated_at!: Date;
-  //   public last_used_at?: Date | null;
+  public revoked!: boolean;
+  public expires_at!: Date | null;
+  public last_used_at!: Date | null;
+
+  public readonly created_at!: Date;
+  public readonly updated_at!: Date;
 }
 
 ApiKeyModel.init(
   {
     id: {
-      type: DataTypes.INTEGER,
-      autoIncrement: true,
+      type: DataTypes.STRING(), // client_id
       primaryKey: true,
     },
-    userId: {
+    user_id: {
       type: DataTypes.UUID,
       allowNull: false,
       references: { model: "users", key: "id" },
       onDelete: "CASCADE",
     },
-    keyHash: {
+    secret_hash: {
       type: DataTypes.STRING,
       allowNull: false,
     },
@@ -43,10 +43,10 @@ ApiKeyModel.init(
       type: DataTypes.DATE,
       allowNull: true,
     },
-    // last_used_at: {
-    //   type: DataTypes.DATE,
-    //   allowNull: true,
-    // },
+    last_used_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
   },
   {
     tableName: "api_keys",
@@ -54,8 +54,7 @@ ApiKeyModel.init(
     createdAt: "created_at",
     updatedAt: "updated_at",
     indexes: [
-      { fields: ["keyHash"] }, // fast lookup
-      { fields: ["userId"] },
+      { fields: ["user_id"] }, // list keys per user
     ],
   }
 );
@@ -63,8 +62,11 @@ ApiKeyModel.init(
 UserModel.hasMany(ApiKeyModel, {
   foreignKey: "user_id",
   as: "api_keys",
-  onDelete: "CASCADE",
 });
-ApiKeyModel.belongsTo(UserModel, { foreignKey: "user_id", as: "user" });
+
+ApiKeyModel.belongsTo(UserModel, {
+  foreignKey: "user_id",
+  as: "user",
+});
 
 export { ApiKeyModel };
