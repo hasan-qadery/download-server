@@ -15,7 +15,7 @@
     "seed": "npm run build && sequelize db:seed:all --config build/db/cli-config.js --seeders-path build/db/seeders",
     "seed:undo": "npm run build && sequelize db:seed:undo --config build/db/cli-config.js --seeders-path build/db/seeders",
     "seed:generate": "npx sequelize-cli seed:generate --name",
-    "migration:generate": "npx sequelize-cli migration:generate --name",
+    "migration:generate": "sequelize migration:generate --migrations-path src/db/migrations --name",
     "lint": "eslint \"src/**/*.{ts,js}\"",
     "pretty": "prettier --write .",
     "test": "jest --runInBand"
