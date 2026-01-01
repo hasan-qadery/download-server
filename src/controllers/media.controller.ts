@@ -16,27 +16,23 @@
 
 import { Request, Response, NextFunction, Router } from "express";
 import multer from "multer";
-import { storageService } from "../services/storage.service";
 import { logger, stream } from "../logger";
 import { config } from "../config";
 import { authMiddleware } from "../middlewares/auth.middleware";
+import { mediaValidationMiddleware } from "../validators/file-validator";
+import { Validator } from "../middlewares/validator";
+import { UploadFileDto } from "../dtos/files/upload-file.dto";
 
 const router = Router();
 router.use(authMiddleware);
 
-router.post("/upload", mediaValidationMiddleware, uploadMedia);
+router.post(
+  "/upload",
+  mediaValidationMiddleware,
+  Validator.body(UploadFileDto),
+  uploadMedia
+);
 
-async function uploadMedia(req: Request, res: Response, next: NextFunction) {
-  if (req.fileValidationError) {
-    if (req.file)
-      unlink(req.file?.path, (err) => {
-        if (err) next(err);
-      });
-    return Resp.error(req.fileValidationError, 403).send(res);
-  }
-
-  if (!req.file)
-    return Resp.error(req.t("StorageErrorEnum.FILE_REQUIRED"), 400).send(res);
-}
+async function uploadMedia(req: Request, res: Response, next: NextFunction) {}
 
 export default router;
