@@ -22,6 +22,7 @@ import { authMiddleware } from "../middlewares/auth.middleware";
 import { mediaValidationMiddleware } from "../validators/file-validator";
 import { Validator } from "../middlewares/validator";
 import { UploadFileDto } from "../dtos/files/upload-file.dto";
+import { UploadService } from "../services/upload.service";
 
 const router = Router();
 router.use(authMiddleware);
@@ -33,6 +34,33 @@ router.post(
   uploadMedia
 );
 
-async function uploadMedia(req: Request, res: Response, next: NextFunction) {}
+async function uploadMedia(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const dto = req.body as UploadFileDto;
+    const files = req.files as Express.Multer.File[];
 
+    if (!files || !files.length) {
+      return res.status(400).json({
+        message: "No files uploaded",
+      });
+    }
+
+    const result = await UploadService.upload({
+      files,
+      keepOriginalName: dto.keep_original_name ?? true,
+      ...(dto.path ? { uploadPath: dto.path } : {}),
+    });
+
+    return res.status(201).json({
+      success: true,
+      files: result,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
 export default router;
